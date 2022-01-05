@@ -1,0 +1,109 @@
+<launch>
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="camera_link_broadcaster" args="0 0 0 0 0 0 base_link d455_link 1000" /> -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="camera_to_base_link" args="0 0 0 0 0 0 1 /base_link /d455_link 1000" /> -->
+  
+  <arg name="use_imu_filter"         default="false"/>
+  <arg name="raw_imu_topic"          default="/d455/imu"/>
+  <arg name="imu_topic"              default="/imu"/>
+  <arg name="raw_pointcloud_topic"   default="/3d_image/3d_cloud"/>
+
+  <arg name="camera_height"          default="1.0"/>
+  <arg name="camera_frame_id"        default="kinetic_link"/>
+  <arg name="base_frame_id"          default="base_link"/>
+  <arg name="odom_frame_id"          default="odom"/>
+  
+  <arg name="max_sensing_range"      default="5.0"/>
+  <arg name="grid_unit_size"         default="0.1"/>
+  <arg name="grid_length"            default="12.0"/>
+  <arg name="grid_width"             default="12.0"/>
+  <arg name="grid_height"            default="1.8"/>
+ 
+  <arg name="delay_sec_"            default="600.0"/>
+  
+  <param name="/use_sim_time"        value="false"/>
+  
+ <group if="$(arg use_imu_filter)">
+  <!-- Launch the Complementary filter node -->
+  <node pkg="imu_complementary_filter" type="complementary_filter_node" name="complementary_filter_gain_node" output="screen">
+    <remap from="input_raw_imu"                                  to = "$(arg raw_imu_topic)" />
+    <param name="do_bias_estimation"                             value = "true"/>
+    <param name="do_adaptive_gain"                               value = "true"/>
+    <param name="use_mag"                                        value = "false"/>
+    <param name="gain_acc"                  type = "double"      value = "0.01"/>
+    <param name="gain_mag"                  type = "double"      value = "0.01"/>
+  </node>
+ </group>
+ 
+  <!-- Launch the r2s_cast node -->
+  <node pkg="r2s_cast" type="r2s_cast" name="r2s_cast" output="screen">
+    <remap from="left"                                           to = "/ir_left" />
+    <remap from="right"                                          to = "/ir_right" />
+    <remap from="rear_left"                                      to = "/ir_rear_left" />
+    <remap from="rear_mid"                                       to = "/ir_rear_mid" />
+    <remap from="rear_right"                                     to = "/ir_rear_right" />
+    <param name="camera_FrameId"             type = "string"     value = "$(arg camera_frame_id)"/>
+    <param name="sensor_fov_"                type = "double"     value = "0.488692"/>
+    <param name="point_num_"                 type = "int"        value = "20"/>
+    <param name="range_max_"                 type = "double"     value = "5.0"/>
+    <param name="range_min_"                 type = "double"     value = "0.01"/>
+
+  </node>
+  
+  <!-- Launch the ground plane segmentation node -->
+  <node pkg="pc_gps" type="groundplanesegmentation" name="groundplanesegmentation" output="screen">
+    <remap from="imu/data"                                       to = "$(arg imu_topic)" />
+    <remap from="cloud_in"                                       to = "$(arg raw_pointcloud_topic)" />
+    <param name="sensor_height"             type = "double"      value = "$(arg camera_height)"/>
+    <param name="num_iter"                  type = "int"         value = "5"/>
+    <param name="num_lpr"                   type = "int"         value = "200"/>
+    <param name="th_seeds"                  type = "double"      value = "1.2"/>
+    <param name="th_dist"                   type = "double"      value = "0.1"/>
+    <param name="th_ceil_"                  type = "double"      value = "$(arg grid_height)"/>
+    <param name="th_box_"                   type = "double"      value = "$(arg max_sensing_range)"/>
+    <param name="map_unit_size_"            type = "double"      value = "$(arg grid_unit_size)"/>
+  </node>
+  
+  <!-- Launch the octomap_server node -->
+  <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+    <remap from = "cloud_in"                                        to = "/points_no_ground" />
+    <remap from = "cloud_in_g"                                      to = "/points_ground" />
+    <param name = "filter_ground"                                value = "false" />
+    <param name = "height_map"                                   value = "false" />
+    <param name = "colored_map"                                  value = "false" />
+    <param name = "frame_id"                type = "string"      value = "$(arg odom_frame_id)" /> ### base_frame_id
+    <param name = "base_frame_id"           type = "string"      value = "$(arg base_frame_id)" /> 
+    <param name = "resolution"              type = "double"      value = "$(arg grid_unit_size)"/>  
+    <param name = "outrem_radius"           type = "double"      value = "1.0" />
+    <param name = "outrem_neighbors"        type = "int"         value = "10" />
+    <param name = "sensor_model/max_range"  type = "double"      value = "$(arg max_sensing_range)" />
+    <param name = "sensor_model/hit"        type = "double"      value = "0.7" />
+    <param name = "sensor_model/miss"       type = "double"      value = "0.4" />
+    <param name = "sensor_model/min"        type = "double"      value = "0.12" />
+    <param name = "sensor_model/max"        type = "double"      value = "0.97" />
+    <param name = "latch"                                        value = "false" /> 
+  </node>
+
+  <!-- Launch the local grid map node -->
+  <node pkg="local_grid_map" type="local_grid_map" name="local_grid_map" output="screen">
+    <remap from="map_in"                                         to = "/projected_map" />
+    <param name="map_length_"              type = "double"       value = "$(arg grid_length)"/>
+    <param name="map_width_"               type = "double"       value = "$(arg grid_width)"/>
+    <param name="delay_sec_"               type = "double"       value = "$(arg delay_sec_)"/>
+    <param name="frame_id_"                type = "string"       value = "$(arg odom_frame_id)"/>### base_frame_id
+  </node>
+  
+  <!-- Launch the p2i_cast node -->
+  <node pkg="p2i_cast" type="p2i_cast" name="p2i_cast" output="screen">
+    <remap from="points_in"                                         to = "/points_ground" />
+    <remap from="image_in"                                         to = "/3d_image/image_raw" />
+  </node>
+  
+  <!-- Launch the grid map visualizer -->
+  <node pkg="grid_map_visualization" type="grid_map_visualization" name="grid_map_visualization" output="screen">
+    <rosparam command="load" file="$(find local_grid_map)/config/local_grid_map.yaml" />
+  </node>
+  
+  <!-- Launch RViz with the demo configuration -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find local_grid_map)/rviz/local_grid_map.rviz" />
+  
+</launch>
