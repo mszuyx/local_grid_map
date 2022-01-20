@@ -1,16 +1,12 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(local_grid_map)
 
+#SET(CMAKE_CXX_FLAGS "-std=c++11 -O2 -g -Wall ${CMAKE_CXX_FLAGS}")
+SET(CMAKE_CXX_FLAGS "-std=c++17 -O2 -g -Wall ${CMAKE_CXX_FLAGS}")
+SET(CMAKE_CXX_STANDARD 17) #14
 
-SET(CMAKE_CXX_FLAGS "-std=c++11 -O2 -g -Wall ${CMAKE_CXX_FLAGS}")
-SET(CMAKE_CXX_STANDARD 14)
-
-#set(CMAKE_CXX_STANDARD 11)
 add_compile_options(-Wall -Wextra -Wpedantic)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-
-
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
