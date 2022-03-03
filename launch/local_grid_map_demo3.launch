@@ -1,0 +1,46 @@
+<launch>
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="camera_link_broadcaster" args="0 0 0 0 0 0 base_link d455_link 1000" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="camera_to_base_link" args="0 0 0 0 0 0 1 /base_link /d455_link 1000" /> 
+  
+  <arg name="use_imu_filter"         default="true"/>
+  <arg name="raw_imu_topic"          default="/d455/imu"/>
+  <arg name="imu_topic"              default="/imu/data"/>
+  <arg name="raw_pointcloud_topic"   default="/d455/depth/color/points"/>
+
+  <arg name="camera_height"          default="1.0"/>
+  <arg name="camera_frame_id"        default="d455_link"/>
+  <arg name="base_frame_id"          default="base_link"/>
+  <arg name="odom_frame_id"          default="odom"/>
+  
+  <arg name="max_sensing_range"      default="7.0"/>
+  <arg name="grid_unit_size"         default="0.15"/>
+  <arg name="grid_length"            default="15.0"/>
+  <arg name="grid_width"             default="15.0"/>
+  <arg name="grid_height"            default="1.0"/>
+  
+  <param name="/use_sim_time"        value="false"/>
+  
+ <group if="$(arg use_imu_filter)">
+  <!-- Launch the Complementary filter node -->
+  <node pkg="imu_complementary_filter" type="complementary_filter_node" name="complementary_filter_gain_node" output="screen">
+    <remap from="input_raw_imu"                                  to = "$(arg raw_imu_topic)" />
+    <param name="do_bias_estimation"                             value = "true"/>
+    <param name="do_adaptive_gain"                               value = "true"/>
+    <param name="use_mag"                                        value = "false"/>
+    <param name="gain_acc"                  type = "double"      value = "0.01"/>
+    <param name="gain_mag"                  type = "double"      value = "0.01"/>
+  </node>
+ </group>
+  
+  
+  <!-- Launch the test node -->
+  <node pkg="sn_depth" type="sn_depth" name="sn_depth" output="screen">
+    <remap from="depth_in"                                          to = "/d455/depth/image_rect_raw" />
+    <remap from="imu/data"                                          to = "$(arg imu_topic)" />
+  </node>
+  
+  
+  <!-- Launch RViz with the demo configuration 
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find local_grid_map)/rviz/local_grid_map2.rviz" />
+  -->
+</launch>
