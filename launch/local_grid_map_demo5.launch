@@ -50,7 +50,7 @@
     <param name="mean_k_"                   type = "int"         value = "-15"/>
     <param name="alpha"                     type = "double"      value = "0.1"/>
     <param name="SVD_refinement"            type = "bool"        value = "false"/>
-    <param name="dense"                     type = "bool"        value = "true"/>
+    <param name="dense"                     type = "bool"        value = "false"/>
   </node>
   
   <!-- Launch the octomap_server node -->
@@ -83,40 +83,31 @@
   
   <!-- Launch the p2i_cast node -->
   <node pkg="p2i_cast" type="p2i_cast" name="p2i_cast" output="screen">
-    <remap from="points_in"                                         to = "/gp_segmentation/cloud/ground" />
-    
+    <remap from="param_in"                                          to = "/gp_segmentation/param" />
     <remap from="image_in"                                          to = "/d455/color/image_raw" />
-    <remap from="imu/data"                                          to = "$(arg imu_topic)" />
-    <remap from="depth_info"                                       to = "/d455/depth/camera_info" />
-    <remap from="camera_info"                                       to = "/d455/color/camera_info" />
-    
-    <remap from="ng_points_in"                                      to = "/gp_segmentation/cloud/not_ground" />
-    <param name="radius_"                   type = "int"            value = "6"/>
-    <param name="do_subtract_"              type = "bool"           value = "false"/>
-    
+    <remap from="depth_in"                                          to = "/d455/depth/image_rect_raw" />
+    <remap from="camera_info_in"                                    to = "/d455/color/camera_info" />
+    <remap from="depth_info_in"                                     to = "/d455/depth/camera_info" />
+    <remap from="depth_to_color"                                    to = "/d455/extrinsics/depth_to_color" />
+    <remap from="depth_out"                                         to = "/ground_depth_image" />
+    <remap from="image_out"                                         to = "/ground_masked_image" />
+    <param name = "warpAffine"            type = "bool"             value = "true" /> 
+    <param name = "publishDepth"          type = "bool"             value = "true" /> 
+    <param name="th_dist"                 type = "double"           value = "0.01"/>
+    <param name="angle_x"                 type = "double"           value = "0.0"/>
+    <param name="angle_y"                 type = "double"           value = "0.0"/>
+    <param name="angle_z"                 type = "double"           value = "-0.0349066"/>
   </node>
   
-  <!-- Launch the img_gps node -->
+   <!-- Launch the img_gps node -->
   <node pkg="img_gps" name="model_inference" type="model_inference.py" output="screen"> 
-    <remap from="image_in"                                          to = "/masked_image" />
+    <remap from="image_in"                                          to = "/ground_masked_image" />
     <remap from="depth_in"                                          to = "/d455/depth/image_rect_raw" />
     <remap from="depth_info_in"                                     to = "/d455/depth/camera_info" />
-    <remap from="camera_info_in"                                    to = "/d455/color/camera_info" />
-    <remap from="depth_to_color"                                    to = "/d455/extrinsics/depth_to_color" />
+    <remap from="homo_matrix_in"                                    to = "/homography_matrix" />
   </node>
-
-  <!--
+<!-- 
   <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" />
-  <node pkg="nodelet" type="nodelet" name="depth_img_to_cloud"
-        args="load depth_image_proc/point_cloud_xyz nodelet_manager">
-    <remap from="camera_info" to="/ground_score/camera_info"/>
-    <remap from="image_rect" to="/ground_score/depth"/>
-    <remap from="points" to="/ground_score/points"/>
-  </node>
-  -->
-  
-  <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" />
-  
   <node pkg="nodelet" type="nodelet" name="depth_img_to_cloud"
         args="load depth_image_proc/point_cloud_xyzrgb nodelet_manager">
     <remap from="rgb/camera_info" to="/ground_score/camera_info"/>
@@ -124,13 +115,11 @@
     <remap from="rgb/image_rect_color" to="/ground_score/score"/>
     <remap from="depth_registered/points" to="/ground_score/points"/>
   </node>
-  
+-->
   <!-- Launch the grid map visualizer -->
   <node pkg="grid_map_visualization" type="grid_map_visualization" name="grid_map_visualization" output="screen">
     <rosparam command="load" file="$(find local_grid_map)/config/local_grid_map.yaml" />
   </node>
   
-  <!-- Launch RViz with the demo configuration 
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find local_grid_map)/rviz/local_grid_map2.rviz" />
-  -->
+
 </launch>
